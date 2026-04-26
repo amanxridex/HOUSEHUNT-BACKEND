@@ -121,12 +121,17 @@ app.get('/api/user/profile/:id', async (req, res) => {
 app.patch('/api/user/profile/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { phone } = req.body;
+        const { phone, name, email } = req.body;
         
         const { data, error } = await supabase
             .from('profiles')
-            .update({ phone })
-            .eq('id', id)
+            .upsert({ 
+                id, 
+                phone, 
+                full_name: name, 
+                email: email,
+                updated_at: new Date()
+            })
             .select()
             .single();
 
