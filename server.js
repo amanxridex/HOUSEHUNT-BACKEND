@@ -84,16 +84,54 @@ app.patch('/api/admin/properties/:id', async (req, res) => {
 // Get User Analytics
 app.get('/api/admin/analytics', async (req, res) => {
     try {
-        // Mocking analytics query logic
         const { count: propertyCount } = await supabase.from('properties').select('*', { count: 'exact', head: true });
-        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
         
         res.json({
             totalProperties: propertyCount,
             totalUsers: userCount,
-            newUsersToday: 5, // Logic for today's count would go here
+            newUsersToday: 5,
             revenue: "₹ 45.8L"
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- USER PROFILE ROUTES ---
+
+// Get User Profile (Checks for Phone)
+app.get('/api/user/profile/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update User Profile (e.g., Add Phone)
+app.patch('/api/user/profile/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { phone } = req.body;
+        
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ phone })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
