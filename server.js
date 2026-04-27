@@ -149,7 +149,7 @@ app.post('/api/ai/chat', async (req, res) => {
     try {
         const { message } = req.body;
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         const response = await axios.post(GEMINI_URL, {
             contents: [{
