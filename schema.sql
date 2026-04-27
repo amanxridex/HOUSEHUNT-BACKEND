@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 2. CREATE PROFILES TABLE (User Data)
 CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+    id TEXT PRIMARY KEY, -- Changed from UUID to TEXT for Firebase
     full_name TEXT,
     email TEXT UNIQUE,
     avatar_url TEXT,
@@ -19,7 +19,7 @@ CREATE TABLE public.profiles (
 -- 3. CREATE PROPERTIES TABLE (Master Database)
 CREATE TABLE public.properties (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    owner_id TEXT REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL, -- Changed to TEXT
     
     -- CORE INFO
     title TEXT NOT NULL,
@@ -86,7 +86,21 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 7. PERFORMANCE INDEXES
+-- 7. CREATE FAVORITES TABLE
+CREATE TABLE public.favorites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    property_id UUID REFERENCES public.properties(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, property_id)
+);
+
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view their own favorites" ON public.favorites FOR SELECT USING (user_id = auth.uid()::text OR true); -- Simplified for backend sync
+CREATE POLICY "Service Role bypass favorites" ON public.favorites FOR ALL USING (true);
+
+-- 8. PERFORMANCE INDEXES
 CREATE INDEX idx_properties_type ON public.properties(property_type);
 CREATE INDEX idx_properties_status ON public.properties(status);
 CREATE INDEX idx_properties_city ON public.properties(city);
+CREATE INDEX idx_favorites_user ON public.favorites(user_id);

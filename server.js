@@ -142,6 +142,35 @@ app.patch('/api/user/profile/:id', async (req, res) => {
     }
 });
 
+// --- AI PROXY ROUTES ---
+const axios = require('axios');
+
+app.post('/api/ai/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await axios.post(GEMINI_URL, {
+            contents: [{
+                parts: [{
+                    text: `You are HuntAI, a premium real estate assistant for HouseHunt India. 
+                    Your goal is to help users find properties (Apartments, Villas, Plots) in India (especially Noida, Delhi, Gurgaon).
+                    Be professional, helpful, and concise. 
+                    The user says: ${message}`
+                }]
+            }]
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error("AI Proxy Error:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to connect to AI Service" });
+    }
+});
+
 app.listen(port, () => {
     console.log(`HouseHunt Backend running on port ${port}`);
 });
