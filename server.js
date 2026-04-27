@@ -166,8 +166,12 @@ app.post('/api/ai/chat', async (req, res) => {
 
         res.json(response.data);
     } catch (error) {
-        console.error("AI Proxy Error:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "Failed to connect to AI Service" });
+        const errorData = error.response ? error.response.data : error.message;
+        console.error("AI Proxy Full Error:", JSON.stringify(errorData, null, 2));
+        res.status(500).json({ 
+            error: "Failed to connect to AI Service", 
+            details: errorData 
+        });
     }
 });
 
