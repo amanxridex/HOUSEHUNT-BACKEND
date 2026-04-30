@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Supabase Client Initialization
 const supabase = createClient(
@@ -153,6 +155,40 @@ app.patch('/api/user/profile/:id', async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- IMAGE UPLOAD ROUTE ---
+app.post('/api/upload', upload.array('images', 6), async (req, res) => {
+    try {
+        const files = req.files;
+        if (!files || files.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded' });
+        }
+
+        const uploadPromises = files.map(async (file) => {
+            const fileName = `${Date.now()}-${file.originalname}`;
+            const { data, error } = await supabase.storage
+                .from('property-images')
+                .upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            const { data: publicUrlData } = supabase.storage
+                .from('property-images')
+                .getPublicUrl(fileName);
+
+            return publicUrlData.publicUrl;
+        });
+
+        const urls = await Promise.all(uploadPromises);
+        res.json({ urls });
+    } catch (error) {
+        console.error('Upload Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
