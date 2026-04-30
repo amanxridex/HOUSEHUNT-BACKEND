@@ -37,13 +37,18 @@ app.get('/api/properties', async (req, res) => {
 // Post a new property (Submitted by user, pending approval)
 app.post('/api/properties', async (req, res) => {
     try {
+        console.log("Incoming Property Data:", req.body);
         const { data, error } = await supabase
             .from('properties')
             .insert([{ ...req.body, status: 'pending' }]);
             
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Insert Error:", error);
+            throw error;
+        }
         res.status(201).json(data);
     } catch (error) {
+        console.error("Server Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
