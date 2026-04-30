@@ -63,6 +63,21 @@ app.get('/api/admin/properties', async (req, res) => {
     }
 });
 
+// Get all users (profiles)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Approve/Reject Property
 app.patch('/api/admin/properties/:id', async (req, res) => {
     const { id } = req.params;
