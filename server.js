@@ -271,7 +271,13 @@ app.get('/api/admin/tickets', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('support_tickets')
-            .select('*')
+            .select(`
+                *,
+                profiles (
+                    email,
+                    full_name
+                )
+            `)
             .order('created_at', { ascending: false });
             
         if (error) throw error;
