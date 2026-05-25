@@ -653,11 +653,16 @@ app.get('/api/admin/defense-logs', async (req, res) => {
     try {
         // Fetch last 1000 logs from Redis
         const logsData = await redis.lrange('admin_logs', 0, 999);
-        const logs = logsData.map(log => JSON.parse(log));
+        
+        // Upstash Redis automatically parses JSON if it was pushed as a stringified JSON object!
+        // So logsData is ALREADY an array of objects. We don't need JSON.parse().
+        // In case it's mixed (some strings, some objects), we handle it safely:
+        const logs = logsData.map(log => typeof log === 'string' ? JSON.parse(log) : log);
+        
         res.json(logs);
     } catch (error) {
         console.error('Failed to fetch logs from Redis', error);
-        res.status(500).json({ error: 'Failed to fetch logs' });
+        res.status(500).json({ error: 'Failed to fetch logs', details: error.message });
     }
 });
 
