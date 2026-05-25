@@ -344,7 +344,9 @@ app.get('/api/admin/defense-logs', async (req, res) => {
 // Track Page Views
 app.post('/api/track-view', async (req, res) => {
     try {
-        const ip = req.ip;
+        let ip = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || 'unknown';
+        if (ip.includes(',')) ip = ip.split(',')[0].trim(); // Handle multiple proxies
+        
         const { page_url } = req.body || {};
         await supabase.from('page_views').insert([{ ip_address: ip, page_url }]);
         res.status(200).json({ success: true });
