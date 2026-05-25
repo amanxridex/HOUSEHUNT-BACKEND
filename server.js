@@ -34,21 +34,77 @@ app.get('/api/properties', async (req, res) => {
     }
 });
 
-// Post a new property (Submitted by user, pending approval)
+// Post a new property or finalize a draft (Submitted by user, pending approval)
 app.post('/api/properties', async (req, res) => {
     try {
         console.log("Incoming Property Data:", req.body);
-        const { data, error } = await supabase
-            .from('properties')
-            .insert([{ ...req.body, status: 'pending' }]);
-            
-        if (error) {
-            console.error("Supabase Insert Error:", error);
-            throw error;
+        const { id, ...propertyData } = req.body;
+        
+        if (id) {
+            const { data, error } = await supabase
+                .from('properties')
+                .update({ ...propertyData, status: 'pending', updated_at: new Date() })
+                .eq('id', id)
+                .select();
+            if (error) throw error;
+            res.status(200).json(data[0]);
+        } else {
+            const { data, error } = await supabase
+                .from('properties')
+                .insert([{ ...propertyData, status: 'pending' }])
+                .select();
+            if (error) throw error;
+            res.status(201).json(data[0]);
         }
-        res.status(201).json(data);
     } catch (error) {
         console.error("Server Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create or Update a Draft
+app.post('/api/properties/draft', async (req, res) => {
+    try {
+        const { id, ...draftData } = req.body;
+        
+        if (id) {
+            // Update existing draft
+            const { data, error } = await supabase
+                .from('properties')
+                .update({ ...draftData, status: 'draft', updated_at: new Date() })
+                .eq('id', id)
+                .select();
+            if (error) throw error;
+            res.json(data[0]);
+        } else {
+            // Create new draft
+            const { data, error } = await supabase
+                .from('properties')
+                .insert([{ ...draftData, status: 'draft' }])
+                .select();
+            if (error) throw error;
+            res.status(201).json(data[0]);
+        }
+    } catch (error) {
+        console.error("Draft Save Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a Draft
+app.delete('/api/properties/draft/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabase
+            .from('properties')
+            .delete()
+            .eq('id', id)
+            .eq('status', 'draft');
+            
+        if (error) throw error;
+        res.status(200).json({ message: 'Draft deleted successfully' });
+    } catch (error) {
+        console.error("Draft Delete Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -121,6 +177,23 @@ app.get('/api/admin/analytics', async (req, res) => {
 });
 
 // --- USER PROFILE ROUTES ---
+
+// Get User Properties
+app.get('/api/user/properties/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const { data, error } = await supabase
+            .from('properties')
+            .select('*')
+            .eq('owner_id', uid)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Get User Profile (Checks for Phone)
 app.get('/api/user/profile/:id', async (req, res) => {
