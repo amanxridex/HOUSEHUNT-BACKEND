@@ -339,6 +339,43 @@ app.get('/api/admin/defense-logs', async (req, res) => {
     }
 });
 
+// --- DEVELOPERS ROUTES ---
+
+// Get all developers (Public)
+app.get('/api/developers', async (req, res) => {
+    try {
+        const { data, error } = await supabase.from('developers').select('*').order('created_at', { ascending: true });
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add developer (Admin)
+app.post('/api/admin/developers', async (req, res) => {
+    try {
+        const { name, short_code, link } = req.body;
+        const { data, error } = await supabase.from('developers').insert([{ name, short_code, link }]).select();
+        if (error) throw error;
+        res.json(data[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete developer (Admin)
+app.delete('/api/admin/developers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabase.from('developers').delete().eq('id', id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- USER PROFILE ROUTES ---
 
 // Track Page Views
