@@ -109,6 +109,22 @@ app.delete('/api/properties/draft/:id', async (req, res) => {
     }
 });
 
+// --- SUPPORT TICKETS ROUTE ---
+app.post('/api/tickets', async (req, res) => {
+    try {
+        const { ticket_id, user_id, issue_text } = req.body;
+        const { data, error } = await supabase
+            .from('support_tickets')
+            .insert([{ ticket_id, user_id, issue_text }])
+            .select();
+        if (error) throw error;
+        res.status(201).json(data[0]);
+    } catch (error) {
+        console.error("Ticket Creation Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- ADMIN ROUTES (ADMIN PANEL) ---
 
 // Get all properties (including pending)
