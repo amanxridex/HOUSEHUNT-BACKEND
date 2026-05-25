@@ -18,6 +18,24 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY // Using Service Role for Admin/Backend operations
 );
 
+// Redis Client Initialization
+const { Redis } = require('@upstash/redis');
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+// Test Redis connection
+(async () => {
+    try {
+        await redis.set("foo", "bar");
+        const val = await redis.get("foo");
+        console.log("Redis connection successful. Test key 'foo' =", val);
+    } catch (err) {
+        console.error("Redis connection failed:", err);
+    }
+})();
+
 app.use(cors());
 app.use(express.json());
 
