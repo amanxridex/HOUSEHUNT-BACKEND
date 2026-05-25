@@ -281,6 +281,49 @@ app.get('/api/admin/analytics', async (req, res) => {
     }
 });
 
+// Get User Stats
+app.get('/api/admin/user-stats', async (req, res) => {
+    try {
+        const today = new Date();
+        today.setUTCHours(0,0,0,0);
+        
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+
+        // Fetch Users
+        const { data: users, error: userErr } = await supabase.from('profiles').select('id, created_at');
+        if (userErr) throw userErr;
+        
+        const totalUsers = users.length;
+        const newToday = users.filter(u => new Date(u.created_at) >= today).length;
+        const new7Days = users.filter(u => new Date(u.created_at) >= sevenDaysAgo).length;
+        const new30Days = users.filter(u => new Date(u.created_at) >= thirtyDaysAgo).length;
+
+        // Fetch Unique Visitors Today
+        const { data: views, error: viewErr } = await supabase
+            .from('page_views')
+            .select('ip_address')
+            .gte('created_at', today.toISOString());
+            
+        if (viewErr) throw viewErr;
+        
+        const visitorsToday = new Set(views.map(v => v.ip_address)).size;
+
+        res.json({
+            totalUsers,
+            newToday,
+            new7Days,
+            new30Days,
+            visitorsToday
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get security defense logs
 app.get('/api/admin/defense-logs', async (req, res) => {
     try {
@@ -297,6 +340,18 @@ app.get('/api/admin/defense-logs', async (req, res) => {
 });
 
 // --- USER PROFILE ROUTES ---
+
+// Track Page Views
+app.post('/api/track-view', async (req, res) => {
+    try {
+        const ip = req.ip;
+        const { page_url } = req.body || {};
+        await supabase.from('page_views').insert([{ ip_address: ip, page_url }]);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Get User Properties
 app.get('/api/user/properties/:uid', async (req, res) => {
