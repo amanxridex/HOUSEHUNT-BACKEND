@@ -164,7 +164,7 @@ app.get('/api/tickets/status/:ticket_id', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('support_tickets')
-            .select('status')
+            .select('status, rating')
             .eq('ticket_id', req.params.ticket_id)
             .single();
         if (error) throw error;
