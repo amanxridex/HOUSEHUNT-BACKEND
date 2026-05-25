@@ -2,11 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const port = process.env.PORT || 5000;
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Trust proxy to get correct IPs if hosted on Render/Heroku
+app.set('trust proxy', 1);
 
 // Supabase Client Initialization
 const supabase = createClient(
@@ -127,6 +131,50 @@ app.post('/api/tickets', async (req, res) => {
 
 // --- ADMIN ROUTES (ADMIN PANEL) ---
 
+// 1. Admin Rate Limiter
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window`
+    message: { error: 'Too many requests from this IP, please try again after 15 minutes.' },
+    handler: async (req, res, next, options) => {
+        // Log rate limit abuse
+        await supabase.from('security_logs').insert([{
+            ip_address: req.ip,
+            user_agent: req.get('User-Agent') || 'Unknown',
+            endpoint: req.originalUrl,
+            method: req.method
+        }]);
+        res.status(options.statusCode).send(options.message);
+    }
+});
+
+// 2. Admin Auth & Security Logger Middleware
+const adminAuthMiddleware = async (req, res, next) => {
+    // For now, we expect a simple secret header to prove the request is from our actual admin frontend.
+    // In production, this should be a verified JWT.
+    const adminToken = req.headers['x-admin-token'];
+    
+    // Simulate a simple shared secret check (e.g., 'Aarambhindia-Secret')
+    if (adminToken !== 'Aarambhindia-Secret') {
+        // Log the unauthorized attempt
+        try {
+            await supabase.from('security_logs').insert([{
+                ip_address: req.ip,
+                user_agent: req.get('User-Agent') || 'Unknown',
+                endpoint: req.originalUrl,
+                method: req.method
+            }]);
+        } catch (e) { console.error('Security log failed', e); }
+        
+        return res.status(403).json({ error: 'Forbidden: Unauthorized Admin Access' });
+    }
+    next();
+};
+
+// Apply security to all /api/admin routes
+app.use('/api/admin', adminLimiter);
+app.use('/api/admin', adminAuthMiddleware);
+
 // Get all properties (including pending)
 app.get('/api/admin/properties', async (req, res) => {
     try {
@@ -212,16 +260,37 @@ app.patch('/api/admin/properties/:id', async (req, res) => {
 // Get User Analytics
 app.get('/api/admin/analytics', async (req, res) => {
     try {
-        const { count: propertyCount } = await supabase.from('properties').select('*', { count: 'exact', head: true });
-        const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        const { count: pendingCount } = await supabase.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        
+        // Fetch properties (Total & Pending)
+        const { data: properties, error: propErr } = await supabase.from('properties').select('status');
+        if (propErr) throw propErr;
+        const totalProperties = properties.length;
+        const pendingApprovals = properties.filter(p => p.status === 'pending').length;
+
+        // Fetch Total Users
+        const { data: users, error: userErr } = await supabase.from('profiles').select('id');
+        if (userErr) throw userErr;
+        const totalUsers = users.length;
+
         res.json({
-            totalProperties: propertyCount || 0,
-            totalUsers: userCount || 0,
-            pendingApprovals: pendingCount || 0,
-            revenue: "₹ 0"
+            totalProperties,
+            pendingApprovals,
+            totalUsers
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get security defense logs
+app.get('/api/admin/defense-logs', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('security_logs')
+            .select('*')
+            .order('timestamp', { ascending: false });
+            
+        if (error) throw error;
+        res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
