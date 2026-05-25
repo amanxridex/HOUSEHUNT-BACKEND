@@ -39,6 +39,34 @@ const redis = new Redis({
 app.use(cors());
 app.use(express.json());
 
+// --- GLOBAL REQUEST LOGGER ---
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', async () => {
+        const duration = Date.now() - start;
+        const logEntry = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            timestamp: new Date().toISOString(),
+            method: req.method,
+            endpoint: req.originalUrl,
+            status: res.statusCode,
+            ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+            user_agent: req.headers['user-agent'] || 'Unknown',
+            duration: duration
+        };
+
+        // Push to Redis list 'admin_logs'
+        try {
+            await redis.lpush('admin_logs', JSON.stringify(logEntry));
+            // Keep only the latest 1000 logs
+            await redis.ltrim('admin_logs', 0, 999);
+        } catch (e) {
+            console.error('Failed to log to Redis', e);
+        }
+    });
+    next();
+});
+
 // --- PUBLIC ROUTES (USER FRONTEND) ---
 
 // Get all approved properties
@@ -617,6 +645,19 @@ app.post('/api/ai/chat', async (req, res) => {
             error: "Failed to connect to AI Service", 
             details: errorData 
         });
+    }
+});
+
+// --- ADMIN LOGS ENDPOINT ---
+app.get('/api/admin/defense-logs', async (req, res) => {
+    try {
+        // Fetch last 1000 logs from Redis
+        const logsData = await redis.lrange('admin_logs', 0, 999);
+        const logs = logsData.map(log => JSON.parse(log));
+        res.json(logs);
+    } catch (error) {
+        console.error('Failed to fetch logs from Redis', error);
+        res.status(500).json({ error: 'Failed to fetch logs' });
     }
 });
 
