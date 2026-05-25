@@ -661,6 +661,33 @@ app.get('/api/admin/defense-logs', async (req, res) => {
     }
 });
 
+// --- FRONTEND CRASH REPORTER ---
+app.post('/api/track-crash', async (req, res) => {
+    try {
+        const { message, url, line, col, stack } = req.body;
+        
+        const logEntry = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            timestamp: new Date().toISOString(),
+            method: 'CLIENT_CRASH',
+            endpoint: url,
+            status: 500, // Treat as an error in the UI
+            ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+            user_agent: req.headers['user-agent'] || 'Unknown',
+            duration: 0,
+            error_details: message
+        };
+
+        await redis.lpush('admin_logs', JSON.stringify(logEntry));
+        await redis.ltrim('admin_logs', 0, 999);
+        
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Failed to log crash to Redis', error);
+        res.status(500).json({ error: 'Failed to log crash' });
+    }
+});
+
 app.listen(port, () => {
     console.log(`HouseHunt Backend running on port ${port}`);
 });
