@@ -157,6 +157,40 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
+// Get all support tickets
+app.get('/api/admin/tickets', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('support_tickets')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update support ticket status
+app.patch('/api/admin/tickets/:id', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    try {
+        const { data, error } = await supabase
+            .from('support_tickets')
+            .update({ status })
+            .eq('id', id)
+            .select();
+            
+        if (error) throw error;
+        res.json(data[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Approve/Reject Property
 app.patch('/api/admin/properties/:id', async (req, res) => {
     const { id } = req.params;
