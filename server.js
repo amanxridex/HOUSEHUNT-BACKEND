@@ -159,6 +159,37 @@ app.post('/api/tickets/:id/messages', async (req, res) => {
     }
 });
 
+// --- GET TICKET STATUS ---
+app.get('/api/tickets/status/:ticket_id', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('support_tickets')
+            .select('status')
+            .eq('ticket_id', req.params.ticket_id)
+            .single();
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- SUBMIT TICKET RATING ---
+app.patch('/api/tickets/:id/rating', async (req, res) => {
+    try {
+        const { rating } = req.body;
+        const { data, error } = await supabase
+            .from('support_tickets')
+            .update({ rating })
+            .eq('id', req.params.id)
+            .select();
+        if (error) throw error;
+        res.json(data[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- ADMIN ROUTES (ADMIN PANEL) ---
 
 // 1. Admin Rate Limiter
