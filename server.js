@@ -164,12 +164,13 @@ app.get('/api/admin/analytics', async (req, res) => {
     try {
         const { count: propertyCount } = await supabase.from('properties').select('*', { count: 'exact', head: true });
         const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        const { count: pendingCount } = await supabase.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'pending');
         
         res.json({
-            totalProperties: propertyCount,
-            totalUsers: userCount,
-            newUsersToday: 5,
-            revenue: "₹ 45.8L"
+            totalProperties: propertyCount || 0,
+            totalUsers: userCount || 0,
+            pendingApprovals: pendingCount || 0,
+            revenue: "₹ 0"
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
