@@ -513,7 +513,7 @@ app.get('/api/user/profile/:id', async (req, res) => {
 app.patch('/api/user/profile/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { phone, name, email } = req.body;
+        const { phone, name, email, photo } = req.body;
         
         const { data, error } = await supabase
             .from('profiles')
@@ -522,6 +522,7 @@ app.patch('/api/user/profile/:id', async (req, res) => {
                 phone, 
                 full_name: name, 
                 email: email,
+                avatar_url: photo,
                 updated_at: new Date()
             })
             .select()
