@@ -84,6 +84,21 @@ app.get('/api/properties', async (req, res) => {
     }
 });
 
+// Get profile by ID
+app.get('/api/profiles/:id', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Post a new property or finalize a draft (Submitted by user, pending approval)
 app.post('/api/properties', async (req, res) => {
     try {
