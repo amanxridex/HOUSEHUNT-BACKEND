@@ -759,6 +759,30 @@ app.get('/api/chats/:userId', async (req, res) => {
             console.error("Supabase Chat Fetch Error:", error);
             throw error;
         }
+
+        // Manually fetch and attach profiles to avoid FK ambiguity errors
+        const profileIds = new Set();
+        data.forEach(chat => {
+            if (chat.buyer_id) profileIds.add(chat.buyer_id);
+            if (chat.seller_id) profileIds.add(chat.seller_id);
+        });
+
+        if (profileIds.size > 0) {
+            const { data: profiles, error: profError } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', Array.from(profileIds));
+
+            if (!profError && profiles) {
+                const profileMap = {};
+                profiles.forEach(p => profileMap[p.id] = p);
+                
+                data.forEach(chat => {
+                    chat.buyer = profileMap[chat.buyer_id] || null;
+                    chat.seller = profileMap[chat.seller_id] || null;
+                });
+            }
+        }
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
