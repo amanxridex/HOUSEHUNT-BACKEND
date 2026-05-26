@@ -708,6 +708,99 @@ app.post('/api/track-crash', async (req, res) => {
     }
 });
 
+// --- PROPERTY CHATS (REALTIME) ---
+// 1. Get or Create a Chat
+app.post('/api/chats', async (req, res) => {
+    try {
+        const { property_id, buyer_id, seller_id } = req.body;
+        
+        // Check if chat already exists
+        const { data: existingChat, error: checkErr } = await supabase
+            .from('chats')
+            .select('*')
+            .eq('property_id', property_id)
+            .eq('buyer_id', buyer_id)
+            .maybeSingle();
+            
+        if (checkErr) throw checkErr;
+        
+        if (existingChat) {
+            return res.json(existingChat);
+        }
+        
+        // Create new chat
+        const { data: newChat, error: insertErr } = await supabase
+            .from('chats')
+            .insert([{ property_id, buyer_id, seller_id }])
+            .select()
+            .single();
+            
+        if (insertErr) throw insertErr;
+        res.status(201).json(newChat);
+    } catch (error) {
+        console.error("Chat Create Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. Get user's chats
+app.get('/api/chats/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        // Fetch all chats where user is buyer or seller
+        const { data, error } = await supabase
+            .from('chats')
+            .select('*, properties(*), buyer:profiles!buyer_id(*), seller:profiles!seller_id(*)')
+            .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+            .order('updated_at', { ascending: false });
+            
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 3. Get messages for a chat
+app.get('/api/chats/:chatId/messages', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('chat_id', req.params.chatId)
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 4. Send a message
+app.post('/api/chats/:chatId/messages', async (req, res) => {
+    try {
+        const { sender_id, content } = req.body;
+        const chat_id = req.params.chatId;
+        
+        const { data, error } = await supabase
+            .from('chat_messages')
+            .insert([{ chat_id, sender_id, content }])
+            .select()
+            .single();
+            
+        if (error) throw error;
+        
+        // Update chat's updated_at
+        await supabase.from('chats').update({ updated_at: new Date() }).eq('id', chat_id);
+        
+        res.status(201).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(port, () => {
     console.log(`HouseHunt Backend running on port ${port}`);
 });
