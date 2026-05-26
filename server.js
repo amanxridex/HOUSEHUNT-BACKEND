@@ -714,18 +714,19 @@ app.post('/api/chats', async (req, res) => {
     try {
         const { property_id, buyer_id, seller_id } = req.body;
         
-        // Check if chat already exists
-        const { data: existingChat, error: checkErr } = await supabase
+        // Check if chat already exists between these two people (regardless of property)
+        // They could have started it where one was buyer and one was seller, or vice versa
+        const { data: existingChats, error: checkErr } = await supabase
             .from('chats')
             .select('*')
-            .eq('property_id', property_id)
-            .eq('buyer_id', buyer_id)
-            .maybeSingle();
+            .or(`and(buyer_id.eq.${buyer_id},seller_id.eq.${seller_id}),and(buyer_id.eq.${seller_id},seller_id.eq.${buyer_id})`)
+            .order('created_at', { ascending: false })
+            .limit(1);
             
         if (checkErr) throw checkErr;
         
-        if (existingChat) {
-            return res.json(existingChat);
+        if (existingChats && existingChats.length > 0) {
+            return res.json(existingChats[0]);
         }
         
         // Create new chat
