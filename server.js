@@ -751,11 +751,14 @@ app.get('/api/chats/:userId', async (req, res) => {
         // Fetch all chats where user is buyer or seller
         const { data, error } = await supabase
             .from('chats')
-            .select('*, properties(*), buyer:profiles!buyer_id(*), seller:profiles!seller_id(*)')
+            .select('*, properties(*)')
             .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
             .order('updated_at', { ascending: false });
             
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Chat Fetch Error:", error);
+            throw error;
+        }
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
