@@ -127,6 +127,28 @@ app.post('/api/properties', async (req, res) => {
     }
 });
 
+// Update a Live Property (from Host Analytics Hub Quick Edit)
+app.patch('/api/properties/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+        
+        const { data, error } = await supabase
+            .from('properties')
+            .update({ ...updates, updated_at: new Date() })
+            .eq('id', id)
+            .select();
+            
+        if (error) throw error;
+        if (!data || data.length === 0) return res.status(404).json({ error: 'Property not found' });
+        
+        res.json(data[0]);
+    } catch (error) {
+        console.error("Property Update Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Create or Update a Draft
 app.post('/api/properties/draft', async (req, res) => {
     try {
