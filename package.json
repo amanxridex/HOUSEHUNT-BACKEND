@@ -26,6 +26,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "multer": "^2.1.1",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "posthog-node": "^5.35.6"
   }
 }

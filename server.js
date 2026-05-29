@@ -4,7 +4,15 @@ const Sentry = require("@sentry/node");
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const { PostHog } = require('posthog-node');
 require('dotenv').config();
+
+// Initialize PostHog
+const posthogClient = new PostHog(
+    'phc_w7kuBCw9omAhgHKULtSMhT5CNHCyCjJq4FWCZ7bcwhyK',
+    { host: 'https://eu.i.posthog.com' }
+);
+globalThis.posthog = posthogClient;
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -893,4 +901,14 @@ app.use(function onError(err, req, res, next) {
 
 app.listen(port, () => {
     console.log(`HouseHunt Backend running on port ${port}`);
+    
+    // Send a test event to verify PostHog installation
+    globalThis.posthog.capture({
+        distinctId: 'server-startup',
+        event: 'backend_started',
+        properties: {
+            environment: 'production',
+            port: port
+        }
+    });
 });
