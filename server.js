@@ -873,19 +873,18 @@ app.get("/debug-sentry", function mainHandler(req, res) {
 });
 
 app.get("/api/test-log", async (req, res) => {
-  const logger = globalThis.__posthogLogger;
-  const severity = globalThis.__posthogSeverity;
+  const { logs } = require('@opentelemetry/api-logs');
+  const logger = logs.getLogger('my-app');
   
   if (logger) {
       logger.emit({
-          severityNumber: severity.INFO,
           severityText: 'INFO',
           body: 'API route /api/test-log called successfully',
           attributes: { route: '/api/test-log', environment: 'production' },
       });
   }
   
-  res.json({ ok: true, message: "PostHog Log sent via OpenTelemetry" });
+  res.json({ ok: true, message: "PostHog Log sent via OpenTelemetry NodeSDK" });
 });
 
 // The error handler must be registered before any other error middleware and after all controllers

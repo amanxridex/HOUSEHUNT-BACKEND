@@ -16,6 +16,7 @@
     "@opentelemetry/exporter-logs-otlp-http": "^0.218.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-logs": "^0.218.0",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "@sentry/node": "^10.55.0",
     "@sentry/profiling-node": "^10.55.0",
     "@supabase/supabase-js": "^2.104.1",
