@@ -14,9 +14,8 @@ const loggerProvider = new LoggerProvider({
   resource: resourceFromAttributes({
     'service.name': 'househunt-backend',
   }),
+  processors: [new SimpleLogRecordProcessor(exporter)],
 });
-
-loggerProvider.addLogRecordProcessor(new SimpleLogRecordProcessor(exporter));
 
 // make the logger and severity numbers available globally
 globalThis.__posthogLogger = loggerProvider.getLogger('househunt-backend');
