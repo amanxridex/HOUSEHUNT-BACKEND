@@ -1,3 +1,5 @@
+require("./instrument.js");
+const Sentry = require("@sentry/node");
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
@@ -849,6 +851,27 @@ app.post('/api/chats/:chatId/messages', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+app.get("/debug-sentry", function mainHandler(req, res) {
+  // Send a log before throwing the error
+  Sentry.logger.info('User triggered test error', {
+    action: 'test_error_endpoint',
+  });
+  // Send a test metric before throwing the error
+  Sentry.metrics.count('test_counter', 1);
+  throw new Error("My first Sentry error!");
+});
+
+// The error handler must be registered before any other error middleware and after all controllers
+Sentry.setupExpressErrorHandler(app);
+
+// Optional fallthrough error handler
+app.use(function onError(err, req, res, next) {
+  // The error id is attached to `res.sentry` to be returned
+  // and optionally displayed to the user for support.
+  res.statusCode = 500;
+  res.end(res.sentry + "\n");
 });
 
 app.listen(port, () => {

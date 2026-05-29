@@ -12,6 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sentry/node": "^10.55.0",
+    "@sentry/profiling-node": "^10.55.0",
     "@supabase/supabase-js": "^2.104.1",
     "@upstash/redis": "^1.38.0",
     "axios": "^1.15.2",
